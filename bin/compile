@@ -2,7 +2,7 @@
 set -euo pipefail
 
 BUILD_DIR=$1
-CACHE_DIR=$2
+CACHE_DIR="$2/google-cloud-sdk"
 ENV_DIR=$3
 BUILDPACK_DIR=`cd $(dirname $0); cd ..; pwd`
 
@@ -19,18 +19,25 @@ fi
 mkdir -p "$CACHE_DIR"
 
 DOWNLOAD_FILE="google-cloud-sdk-${SDK_VERSION}-linux-x86_64.tar.gz"
+LOCAL_FILE="google-cloud-sdk.tar.gz"
+EXISTING_VERSION="none"
 
-if [ -f "$CACHE_DIR/$DOWNLOAD_FILE" ]; then
-  echo "$DOWNLOAD_FILE already exists in cache, skipping download"
+if [ -r "$CACHE_DIR/VERSION" ]; then
+  EXISTING_VERSION=$(cat "$CACHE_DIR/VERSION")
+fi
+
+if [[ -r "$CACHE_DIR/$LOCAL_FILE" && "$EXISTING_VERSION" == "$SDK_VERSION" ]]; then
+  echo "Found version $EXISTING_VERSION in cache, skipping download"
 else
-  echo "Downloading $DOWNLOAD_FILE to cache"
-  wget -q "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/$DOWNLOAD_FILE" -O "$CACHE_DIR/$DOWNLOAD_FILE"
-  echo "Downloaded $DOWNLOAD_FILE to cache"
+  echo "Downloading version $SDK_VERSION to cache"
+  wget -q "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/$DOWNLOAD_FILE" -O "$CACHE_DIR/$LOCAL_FILE"
+  echo "Downloaded version $SDK_VERSION to cache"
+  echo -n "$SDK_VERSION" > "$CACHE_DIR/VERSION"
 fi
 
 mkdir -p "$APP_DIR"
 
-tar zxf "$CACHE_DIR/$DOWNLOAD_FILE" --directory "$APP_DIR" --strip-components=1
+tar zxf "$CACHE_DIR/$LOCAL_FILE" --directory "$APP_DIR" --strip-components=1
 $APP_DIR/install.sh --usage-reporting=false --path-update=false --bash-completion=false
 
 # This may not exist already
